@@ -1,0 +1,29 @@
+{
+  "name": "Squish Stack",
+  "short_name": "Squish Stack",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#6d53eb",
+  "theme_color": "#6d53eb",
+  "icons": [
+    {
+      "src": "games/stack/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "games/stack/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "games/stack/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "./",
+  "scope": "./",
+  "description": "Three colorful squishy games: Stack, Match and Catch."
+}
