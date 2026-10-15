@@ -1,0 +1,30 @@
+'use strict';
+(()=>{
+ const $=id=>document.getElementById(id),c=$('catch'),g=c.getContext('2d'),names=['pip','splash','butter','twirl','sprout','berry'];
+ const art=names.map(name=>{const i=new Image();i.src='../../assets/match-characters/'+name+'.png';return i});
+ let state='ready',score=0,best=0,lives=3,level=1,items=[],fx=[],x=240,target=240,keys=new Set(),spawnIn=.5,last=0,invulnerable=0,ready=false;
+ try{const n=Number(localStorage.getItem('squishcatch.best'));if(Number.isSafeInteger(n)&&n>0)best=n;}catch{}
+ const ui=()=>{$('score').textContent=score;$('best').textContent=best;$('lives').textContent=lives;$('level').textContent=level;};ui();
+ Promise.all(art.map(i=>i.decode())).then(()=>{ready=true;$('start').disabled=false;$('start').textContent='LET’S CATCH';}).catch(()=>{$('start').textContent='RELOAD TO TRY AGAIN';$('intro').textContent='The characters could not load. Reconnect and reload the page.';});
+ function begin(){if(!ready)return;state='playing';score=0;lives=3;level=1;items=[];fx=[];x=target=240;keys.clear();spawnIn=.65;invulnerable=0;$('overlay').style.display='none';$('pause').disabled=false;$('pause').textContent='Pause';$('notice').textContent='Catch the squishies. Avoid purple prickles.';ui();c.focus({preventScroll:true});}
+ function pause(){if(state==='playing'){state='paused';keys.clear();$('pause').textContent='Resume';$('overlay').style.display='flex';$('overlay').innerHTML='<div class="panel"><h1>Squish break.</h1><p>Your basket will be right here.</p><button class="primary" id="resume">KEEP CATCHING</button></div>';$('resume').onclick=resume;}else if(state==='paused')resume();}
+ function resume(){state='playing';$('overlay').style.display='none';$('pause').textContent='Pause';c.focus({preventScroll:true});}
+ function end(){state='over';keys.clear();$('pause').disabled=true;$('overlay').style.display='flex';$('overlay').innerHTML='<div class="panel"><span class="badge">NICE CATCH!</span><h1>Squish<br>Happens!</h1><p>You scored '+score+' points and reached level '+level+'.<br>Device best: '+best+'</p><button class="primary" id="again">CATCH AGAIN</button><p><a href="../../index.html">Try another game</a></p></div>';$('again').onclick=begin;$('again').focus({preventScroll:true});}
+ function hit(item){if(item.bad){if(invulnerable>0)return;lives--;invulnerable=.85;$('notice').textContent='Prickly! Keep an eye on the purple shapes.';}else{score+=10;level=1+Math.floor(score/100);if(score>best){best=score;try{localStorage.setItem('squishcatch.best',String(best));}catch{}}$('notice').textContent=score%100===0?'Level '+level+'! Things are speeding up.':'Nice catch!';for(let j=0;j<7;j++)fx.push({x:item.x,y:500,vx:(Math.random()-.5)*170,vy:-80-Math.random()*80,t:.5});}ui();if(lives<=0)end();}
+ function update(dt){if(state!=='playing')return;invulnerable=Math.max(0,invulnerable-dt);if(keys.has('left'))target-=330*dt;if(keys.has('right'))target+=330*dt;target=Math.max(48,Math.min(432,target));x+=Math.max(-440*dt,Math.min(440*dt,target-x));spawnIn-=dt;
+  if(spawnIn<=0){items.push({x:30+Math.random()*420,y:-32,speed:115+Math.min(level-1,15)*16+Math.random()*25,type:Math.floor(Math.random()*6),bad:score>=30&&Math.random()<Math.min(.27,.13+level*.012)});spawnIn=Math.max(.32,.88-(level-1)*.045)*(0.9+Math.random()*.2);}
+  for(let i=items.length-1;i>=0;i--){const item=items[i],before=item.y;item.y+=item.speed*dt;if(before<484&&item.y>=484&&Math.abs(item.x-x)<53){items.splice(i,1);hit(item);if(state!=='playing')break;}else if(item.y>580){items.splice(i,1);if(!item.bad){lives--;$('notice').textContent='One got away!';ui();if(lives<=0){end();break;}}}}
+  for(const p of fx){p.t-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=240*dt;}fx=fx.filter(p=>p.t>0);
+ }
+ function draw(){g.clearRect(0,0,480,560);g.fillStyle='#ffffff70';for(let j=0;j<18;j++){g.beginPath();g.arc((j*137+20)%480,(j*73+40)%480,2+j%3,0,7);g.fill();}g.fillStyle='#62cbbd';g.fillRect(0,540,480,20);
+  for(const i of items){if(i.bad){g.save();g.translate(i.x,i.y);g.fillStyle='#6629a6';g.beginPath();for(let j=0;j<20;j++){let r=j%2?15:25,a=j*Math.PI/10;g.lineTo(Math.cos(a)*r,Math.sin(a)*r);}g.closePath();g.fill();g.fillStyle='#fff';g.font='bold 24px sans-serif';g.textAlign='center';g.fillText('!',0,8);g.restore();}else if(art[i.type].complete)g.drawImage(art[i.type],i.x-26,i.y-26,52,52);}
+  g.save();g.globalAlpha=invulnerable>0?.55:1;g.fillStyle='#47247d';g.beginPath();g.roundRect(x-51,498,102,39,13);g.fill();g.fillStyle='#ffce46';g.beginPath();g.roundRect(x-48,495,96,35,12);g.fill();g.fillStyle='#ffefb0';g.fillRect(x-38,503,76,5);g.fillStyle='#9d6b26';for(let j=-2;j<=2;j++)g.fillRect(x+j*15-2,512,4,12);g.restore();
+  for(const p of fx){g.globalAlpha=p.t*2;g.fillStyle='#ff5f8f';g.fillRect(p.x,p.y,6,6);}g.globalAlpha=1;
+ }
+ function frame(t){const dt=Math.min(.035,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(frame);}requestAnimationFrame(frame);
+ function point(e){const r=c.getBoundingClientRect();target=Math.max(48,Math.min(432,(e.clientX-r.left)*480/r.width));}
+ c.addEventListener('pointerdown',e=>{if(state!=='playing')return;c.setPointerCapture(e.pointerId);point(e);});c.addEventListener('pointermove',e=>{if(state==='playing'&&(e.pointerType==='mouse'||c.hasPointerCapture(e.pointerId)))point(e);});
+ for(const dir of ['left','right']){const b=$(dir);b.onpointerdown=e=>{e.preventDefault();if(state!=='playing')return;b.setPointerCapture(e.pointerId);keys.add(dir);};for(const name of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(name,()=>keys.delete(dir));}
+ document.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)&&state==='playing'){e.preventDefault();keys.add(e.key==='ArrowLeft'?'left':'right');}if(e.key.toLowerCase()==='p'&&!e.repeat)pause();});document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')keys.delete('left');if(e.key==='ArrowRight')keys.delete('right');});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='playing')pause();});window.addEventListener('blur',()=>{if(state==='playing')pause();});
+ $('start').onclick=begin;$('pause').onclick=pause;
+})();
